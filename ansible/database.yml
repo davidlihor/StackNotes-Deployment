@@ -1,0 +1,73 @@
+- name: Install MongoDB
+  hosts: db
+  become: true
+  tasks:
+    - name: Install Dependencies
+      ansible.builtin.apt:
+        name:
+          - gnupg
+          - curl
+        state: present
+        update_cache: true
+
+    - name: Download MongoDB GPG Key
+      ansible.builtin.get_url:
+        url: https://www.mongodb.org/static/pgp/server-8.0.asc
+        dest: /tmp/mongodb-server-8.0.asc
+        mode: "0644"
+
+    - name: Conver GPG Key to binary format
+      ansible.builtin.command: >
+        gpg --dearmor -o /usr/share/keyrings/mongodb-server-8.0.gpg /tmp/mongodb-server-8.0.asc
+      args:
+        creates: /usr/share/keyrings/mongodb-server-8.0.gpg
+
+    - name: Remove temporary GPG key file
+      ansible.builtin.file:
+        path: /tmp/mongodb-server-8.0.asc
+        state: absent
+
+    - name: Add MongoDB Repository List
+      ansible.builtin.copy:
+        dest: /etc/apt/sources.list.d/mongodb-org-8.0.list
+        content: |
+          deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-8.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/8.0 multiverse
+        mode: "0644"
+
+    - name: Update cache & Install MongoDB
+      ansible.builtin.apt:
+        name:
+          - mongodb-org
+        state: present
+        update_cache: true
+
+    - name: Ensure MongoDB service is running and enabled
+      ansible.builtin.systemd:
+        name: mongod
+        state: started
+        enabled: true
+
+    - name: Create MongoDB root user
+      shell: |
+        mongosh admin --eval '
+          db.createUser({
+            user: "root",
+            pwd: "mongopw",
+            roles: [ { role: "userAdminAnyDatabase", db: "admin" } ]
+          })
+        '
+      args:
+        executable: /bin/bash
+
+    - name: Set MongoDB to listen on all interfaces
+      lineinfile:
+        path: /etc/mongod.conf
+        regexp: '^ *bindIp:'
+        line: '  bindIp: 0.0.0.0'
+        backrefs: yes
+
+    - name: Restart MongoDB
+      ansible.builtin.systemd:
+        name: mongod
+        state: restarted
+        enabled: true

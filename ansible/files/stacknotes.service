@@ -1,0 +1,14 @@
+[Unit]
+Description=Node.js Backend
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/npm run start
+WorkingDirectory=/opt/stacknotes/BACKEND
+Restart=always
+Environment=NODE_ENV=production
+User=vagrant
+Group=vagrant
+
+[Install]
+WantedBy=multi-user.target

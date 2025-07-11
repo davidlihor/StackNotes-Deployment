@@ -1,0 +1,90 @@
+---
+- name: Load secrets for frontend
+  ansible.builtin.include_vars: secrets.yml
+
+- name: Install Dependencies
+  ansible.builtin.apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - git
+    state: present
+    update_cache: true
+
+- name: Add GPG key NodeSource
+  ansible.builtin.apt_key:
+    url: https://deb.nodesource.com/gpgkey/nodesource.gpg.key
+    state: present
+
+- name: Add NodeSource Repository
+  ansible.builtin.apt_repository:
+    repo: "deb https://deb.nodesource.com/node_{{ frontend_node_version }}.x {{ ansible_lsb.codename }} main"
+    state: present
+
+- name: Update cache and install node.js
+  ansible.builtin.apt:
+    name: nodejs
+    state: present
+    update_cache: true
+
+- name: Clone Repository
+  ansible.builtin.git:
+    repo: "{{ frontend_repo }}"
+    dest: "{{ frontend_path }}"
+    version: "main"
+    force: true
+
+- name: Install npm dependencies
+  ansible.builtin.command: npm install
+  args:
+    chdir: "{{ frontend_path }}/FRONTEND"
+    creates: "{{ frontend_path }}/FRONTEND/node_modules"
+
+- name: Copy .env file securely
+  ansible.builtin.template:
+    src: .env.j2
+    dest: "{{ frontend_path }}/FRONTEND/.env"
+    owner: vagrant
+    group: vagrant
+    mode: "600"
+
+- name: Build project
+  ansible.builtin.command: npm run build
+  args:
+    chdir: "{{ frontend_path }}/FRONTEND"
+    creates: "{{ frontend_path }}/FRONTEND/dist"
+
+- name: Install NGINX
+  ansible.builtin.apt:
+    name: nginx
+    update_cache: true
+
+- name: Ensure NGINX service is running and enabled
+  ansible.builtin.systemd:
+    name: nginx
+    state: started
+    enabled: true
+
+- name: Copy custom nginx config
+  ansible.builtin.copy:
+    src: nginx.conf
+    dest: /etc/nginx/sites-available/default
+    owner: root
+    group: root
+    mode: '0644'
+    backup: true
+
+- name: Copy app to NGINX path
+  ansible.builtin.copy:
+    src: "{{ frontend_path }}/FRONTEND/dist/"
+    dest: "/usr/share/nginx/html/"
+    remote_src: true
+    owner: www-data
+    group: www-data
+    mode: "0755"
+
+- name: Reload nginx
+  ansible.builtin.service:
+    name: nginx
+    state: reloaded

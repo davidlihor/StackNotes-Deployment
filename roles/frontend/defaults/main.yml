@@ -1,0 +1,4 @@
+---
+frontend_node_version: "20"
+frontend_repo: https://github.com/davidlihor/StackNotes.git
+frontend_path: /opt/stacknotes

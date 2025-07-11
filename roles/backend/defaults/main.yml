@@ -1,0 +1,4 @@
+---
+backend_node_version: "20"
+backend_repo: https://github.com/davidlihor/StackNotes.git
+backend_path: /opt/stacknotes

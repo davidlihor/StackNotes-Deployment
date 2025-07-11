@@ -1,0 +1,17 @@
+- name: Provision database
+  hosts: db
+  become: true
+  roles:
+    - db
+
+- name: Provision backend
+  hosts: backend
+  become: true
+  roles:
+    - backend
+
+- name: Provision frontend
+  hosts: frontend
+  become: true
+  roles:
+    - frontend

@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "mongodb-svc"
+  labels:
+    app: "stacknotes"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: "mongodb-svc"
+  template:
+    metadata:
+      labels:
+        app: "mongodb-svc"
+    spec:
+      containers:
+        - name: "mongodb-svc"
+          image: "mongo"
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: mongo_initdb_root_username
+                  optional: false
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: mongo_initdb_root_password
+                  optional: false
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "1"
+          ports:
+            - containerPort: 27017
+              protocol: TCP
+          volumeMounts:
+            - name: db-volume
+              mountPath: /data/db
+      volumes:
+        - name: db-volume
+          persistentVolumeClaim:
+            claimName: db-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: db-pvc
+spec:
+  resources:
+    requests:
+      storage: 1Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-clusterip
+spec:
+  selector:
+    app: "mongodb-svc"
+  ports:
+  - port: 27017
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: db-secret
+type: Opaque
+stringData:
+  mongo_initdb_root_username: root
+  mongo_initdb_root_password: mongopw

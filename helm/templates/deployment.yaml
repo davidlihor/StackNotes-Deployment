@@ -1,0 +1,73 @@
+{{- range .Values.apps }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .name }}
+  labels:
+    app: {{ .label }}
+spec:
+  replicas: {{ .replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .name }}
+    spec:
+      containers:
+        - name: {{ .name }}
+          image: {{ .image }}          
+
+
+          {{- if or .config .secrets }}
+          env:
+            {{- $appName := .name }}
+            
+            {{- if .config }}
+            {{- range $key, $_ := .config }}
+            - name: {{ $key | upper }}
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ $appName }}-config
+                  key: {{ $key | lower }}
+            {{- end }}
+            {{- end }}
+
+            {{- if .secrets }}
+            {{- range $key, $_ := .secrets }}
+            - name: {{ $key | upper }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $appName }}-secret
+                  key: {{ $key }}
+            {{- end }}
+            {{- end }}
+
+          {{- end }}
+
+
+
+          ports:
+            - containerPort: {{ .port }}
+              protocol: TCP
+          
+          {{- if .volumes }}
+          volumeMounts:
+          {{- range .volumes }}
+            - name: {{ .name }}-volume
+              mountPath: {{ .mountPath }}
+          {{- end }}
+          {{- end }}
+
+      {{- if .volumes }}
+      volumes:
+        {{- range .volumes }}
+        - name: {{ .name }}-volume
+          persistentVolumeClaim:
+            claimName: {{ .name }}-pvc
+        {{- end }}
+      {{- end }}
+
+{{- end }}

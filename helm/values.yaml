@@ -1,0 +1,54 @@
+services:
+  - name: db-clusterip
+    selector: mongodb-svc
+    type: ClusterIP
+    port: 27017
+    
+  - name: backend-clusterip
+    selector: stacknotes-svc
+    type: ClusterIP
+    port: 80
+    targetPort: 3500
+
+  - name: frontend-clusterip
+    selector: stacknotes-app
+    type: ClusterIP
+    port: 80
+
+apps:
+  - name: mongodb-svc
+    image: mongo
+    label: stacknotes
+    replicaCount: 1
+    port: 27017
+    secrets:
+      mongo_initdb_root_username: root
+      mongo_initdb_root_password: mongopw
+    volumes:
+      - name: db
+        mountPath: /data/db
+
+
+  - name: stacknotes-svc
+    image: stacknotes-backend
+    label: stacknotes
+    replicaCount: 1
+    port: 3500
+    config:
+      node_environment: Development
+      cors_allowed_origins: http://localhost:3000,http://localhost:5173,https://app.stacknotes.local
+    secrets:
+      database_uri: mongodb://root:mongopw@db-clusterip:27017/stacknotes?authSource=admin
+      access_token_secret: b94802f4675a1c374df3d61ec80bec89327ec9ec206b4d669524f543d04d46e7627e683d2674d09de0b2df5614c14fd9490bca954a5716c6c9b1327c6595a3dc
+      refresh_token_secret: 9106c739cfbdf45f39d825beadc09ba66a137b9b04007760570f8888f6fc31346f26cb416f05832670b842eb951129f1525e8c466487e55780576bf0e82e07a1
+    volumes:
+      - name: backend
+        mountPath: /app/logs
+
+  - name: stacknotes-app
+    image: stacknotes-frontend
+    label: stacknotes
+    replicaCount: 1
+    port: 80
+    config:
+      vite_api_url: https://api.stacknotes.local

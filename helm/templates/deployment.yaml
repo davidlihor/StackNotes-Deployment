@@ -18,13 +18,12 @@ spec:
     spec:
       containers:
         - name: {{ .name }}
-          image: {{ .image }}          
-
-
+          image: {{ .image }}
           {{- if or .config .secrets }}
+          
           env:
             {{- $appName := .name }}
-            
+          
             {{- if .config }}
             {{- range $key, $_ := .config }}
             - name: {{ $key | upper }}
@@ -34,7 +33,7 @@ spec:
                   key: {{ $key | lower }}
             {{- end }}
             {{- end }}
-
+           
             {{- if .secrets }}
             {{- range $key, $_ := .secrets }}
             - name: {{ $key | upper }}
@@ -44,23 +43,34 @@ spec:
                   key: {{ $key }}
             {{- end }}
             {{- end }}
-
+          
           {{- end }}
-
-
-
+          
           ports:
             - containerPort: {{ .port }}
               protocol: TCP
+          {{- if eq .name "stacknotes-app" }}
+            - containerPort: 8080
+              protocol: TCP
+          {{- end }}
           
           {{- if .volumes }}
           volumeMounts:
-          {{- range .volumes }}
+            {{- range .volumes }}
             - name: {{ .name }}-volume
               mountPath: {{ .mountPath }}
+            {{- end }}
           {{- end }}
-          {{- end }}
-
+        
+        {{- if eq .name "stacknotes-app" }}
+        - name: nginx-exporter
+          image: nginx/nginx-prometheus-exporter:latest
+          args:
+            - "--nginx.scrape-uri=http://localhost:8080/nginx_status"
+          ports:
+            - containerPort: 9113
+        {{- end }}
+      
       {{- if .volumes }}
       volumes:
         {{- range .volumes }}

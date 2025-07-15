@@ -4,3 +4,5 @@
 **/*.log
 **/.vault_pass.txt
 **/secrets.yml
+**/*.crt
+**/*.key

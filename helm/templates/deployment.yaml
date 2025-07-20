@@ -45,15 +45,20 @@ spec:
             {{- end }}
           
           {{- end }}
-          
-          ports:
-            - containerPort: {{ .port }}
-              protocol: TCP
-          {{- if eq .name "stacknotes-app" }}
-            - containerPort: 8080
-              protocol: TCP
+
+          {{- if or .resources $.Values.defaultResources }}
+          resources:
+            {{- toYaml (default $.Values.defaultResources .resources) | nindent 12 }}
           {{- end }}
-          
+
+          {{- if .ports }}
+          ports:
+            {{- range .ports }}
+            - containerPort: {{ .port }}
+              protocol: TCP            
+            {{- end -}}  
+          {{- end -}}
+
           {{- if .volumes }}
           volumeMounts:
             {{- range .volumes }}
@@ -61,16 +66,53 @@ spec:
               mountPath: {{ .mountPath }}
             {{- end }}
           {{- end }}
-        
-        {{- if eq .name "stacknotes-app" }}
-        - name: nginx-exporter
-          image: nginx/nginx-prometheus-exporter:latest
+
+        {{- if .sidecars }}
+        {{- range .sidecars }}
+        {{- $sidecarName := . }}
+        {{- $sidecarConfig := index $.Values.sidecars $sidecarName }}
+        {{- if $sidecarConfig }}
+        - name: {{ $sidecarName }}
+          image: {{ $sidecarConfig.image }}
+          {{- if $sidecarConfig.command }}
+          command:
+            {{- toYaml $sidecarConfig.command | nindent 12 }}
+          {{- end }}
+          {{- if $sidecarConfig.args }}
           args:
-            - "--nginx.scrape-uri=http://localhost:8080/nginx_status"
+            {{- toYaml $sidecarConfig.args | nindent 12 }}
+          {{- end }}
+          {{- if $sidecarConfig.env }}
+          env:
+            {{- range $key, $value := $sidecarConfig.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          {{- end }}
+          {{- if $sidecarConfig.ports }}
           ports:
-            - containerPort: 9113
+            {{- range $sidecarConfig.ports }}
+            - containerPort: {{ .port }}
+              {{- if .name }}
+              name: {{ .name }}
+              {{- end }}
+              protocol: {{ .protocol | default "TCP" }}
+            {{- end }}
+          {{- end }}
+          {{- if $sidecarConfig.volumeMounts }}
+          volumeMounts:
+            {{- toYaml $sidecarConfig.volumeMounts | nindent 12 }}
+          {{- end }}
+          {{- if $sidecarConfig.resources }}
+          resources:
+            {{- toYaml $sidecarConfig.resources | nindent 12 }}
+          {{- end }}
+        {{- else }}
+        {{- fail (printf "Sidecar '%s' does not exist in sidecars for app '%s'" $sidecarName $.name) }}
         {{- end }}
-      
+        {{- end }}
+        {{- end }}
+
       {{- if .volumes }}
       volumes:
         {{- range .volumes }}

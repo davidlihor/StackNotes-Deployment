@@ -1,4 +1,5 @@
 {{- range .Values.apps }}
+{{- $appName := .name }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -16,14 +17,33 @@ spec:
       labels:
         app: {{ .name }}
     spec:
+      {{- if .initContainers }}
+      initContainers:
+        {{- range .initContainers }}
+        {{- $initName := . }}
+        {{- $init := index $.Values.initContainers $initName }}
+        {{- if $init }}
+        - name: {{ $initName }}
+          image: {{ $init.image }}
+          {{- if $init.command }}
+          command:
+            {{- toYaml $init.command | nindent 12 }}
+          {{- end }}
+          {{- if $init.args }}
+          args:
+            {{- toYaml $init.args | nindent 12 }}
+          {{- end }}
+         {{- else }}
+        {{- fail (printf "InitContainer '%s' not found in .Values.initContainers for app '%s'" $initName $appName) }}
+        {{- end }}
+        {{- end }}
+      {{- end }}
+
       containers:
         - name: {{ .name }}
           image: {{ .image }}
           {{- if or .config .secrets }}
-          
           env:
-            {{- $appName := .name }}
-          
             {{- if .config }}
             {{- range $key, $_ := .config }}
             - name: {{ $key | upper }}
@@ -62,7 +82,7 @@ spec:
           {{- if .volumes }}
           volumeMounts:
             {{- range .volumes }}
-            - name: {{ .name }}-volume
+            - name: {{ .name }}
               mountPath: {{ .mountPath }}
             {{- end }}
           {{- end }}
@@ -108,7 +128,7 @@ spec:
             {{- toYaml $sidecarConfig.resources | nindent 12 }}
           {{- end }}
         {{- else }}
-        {{- fail (printf "Sidecar '%s' does not exist in sidecars for app '%s'" $sidecarName $.name) }}
+        {{- fail (printf "Sidecar '%s' does not exist in .Values.sidecars for app '%s'" $sidecarName $appName) }}
         {{- end }}
         {{- end }}
         {{- end }}
@@ -116,9 +136,14 @@ spec:
       {{- if .volumes }}
       volumes:
         {{- range .volumes }}
-        - name: {{ .name }}-volume
+        - name: {{ .name }}
+          {{- if eq .type "pvc" }}
           persistentVolumeClaim:
-            claimName: {{ .name }}-pvc
+            claimName: {{ .name | default (printf "%s-pvc" .name) }}-pvc
+        {{- else if eq .type "configMap" }}
+          configMap:
+            name: {{ .name }}
+        {{- end }}
         {{- end }}
       {{- end }}
 

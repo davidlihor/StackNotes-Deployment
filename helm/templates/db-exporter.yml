@@ -14,6 +14,20 @@ spec:
       labels:
         app: mongodb-exporter
     spec:
+      initContainers:
+      - name: wait-for-user
+        image: mongo
+        command:
+          - sh
+          - -c
+          - |
+            echo "Waiting for user mongodb_exporter..."
+            until mongosh "mongodb://mongodb_exporter:mongopw@db-clusterip:27017/admin?authSource=admin" --eval "db.runCommand({ ping: 1 })" > /dev/null 2>&1; do
+              echo "User is not ready yet, retrying..."
+              sleep 5
+            done
+            echo "User exists, starting the exporter"
+
       containers:
         - name: mongodb-exporter
           image: percona/mongodb_exporter:0.37.0
@@ -46,6 +60,3 @@ spec:
       targetPort: http-metrics
       name: http-metrics
   type: ClusterIP
-
-
-# db.createUser({ user: "mongodb_exporter", pwd: "mongopw", roles: [{ role: "clusterMonitor", db: "admin" },{ role: "read", db: "local" }]})

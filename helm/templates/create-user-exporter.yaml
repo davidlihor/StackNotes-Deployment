@@ -1,0 +1,46 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: mongo-create-exporter-user
+spec:
+  template:
+    spec:
+      initContainers:
+        - name: wait-for-mongo
+          image: busybox
+          command:
+            - sh
+            - -c
+            - |
+              n=0
+              until nc -z db-clusterip 27017; do
+                echo "Waiting for MongoDB... attempt $n"
+                n=$((n+1))
+                if [ $n -ge 30 ]; then
+                  echo "Timeout waiting for MongoDB"
+                  exit 1
+                fi
+                sleep 2
+              done
+      containers:
+        - name: mongo-client
+          image: mongo
+          command: ["mongosh"]
+          args:
+            - "--host=db-clusterip"
+            - "-u=root"
+            - "-p=mongopw"
+            - "--authenticationDatabase=admin"
+            - "--eval"
+            - |
+              db = db.getSiblingDB("admin");
+              db.createUser({
+                user: "mongodb_exporter",
+                pwd: "mongopw",
+                roles: [
+                  { role: "clusterMonitor", db: "admin" },
+                  { role: "read", db: "local" }
+                ]
+              });
+      restartPolicy: Never
+  backoffLimit: 2

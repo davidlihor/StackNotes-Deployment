@@ -36,6 +36,7 @@ apps:
     volumes:
       - name: db
         mountPath: /data/db
+        type: pvc
 
   - name: stacknotes-svc
     image: stacknotes-backend
@@ -53,6 +54,9 @@ apps:
     volumes:
       - name: backend
         mountPath: /app/logs
+        type: pvc
+    initContainers:
+      - wait-for-mongo
 
   - name: stacknotes-app
     image: stacknotes-frontend
@@ -81,3 +85,8 @@ sidecars:
       limits:
         memory: "128Mi"
         cpu: "100m"
+
+initContainers:
+  wait-for-mongo:
+    image: busybox
+    command: ['sh', '-c', 'until nc -z db-clusterip 27017; do echo waiting for mongo; sleep 2; done;']

@@ -66,6 +66,11 @@ spec:
           
           {{- end }}
 
+          {{- if .args }}
+          args:
+            {{- toYaml .args | nindent 12 }}
+          {{- end }}
+
           {{- if or .resources $.Values.defaultResources }}
           resources:
             {{- toYaml (default $.Values.defaultResources .resources) | nindent 12 }}
@@ -75,8 +80,11 @@ spec:
           ports:
             {{- range .ports }}
             - containerPort: {{ .port }}
-              protocol: TCP            
-            {{- end -}}  
+              protocol: TCP
+              {{- if .name }}
+              name: {{ .name }}     
+              {{- end -}}
+            {{- end -}}
           {{- end -}}
 
           {{- if .volumes }}

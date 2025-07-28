@@ -10,18 +10,34 @@ services:
   - name: db-clusterip
     selector: mongodb-svc
     type: ClusterIP
-    port: 27017
+    ports:
+    - name: http
+      port: 27017
     
   - name: backend-clusterip
     selector: stacknotes-svc
     type: ClusterIP
-    port: 80
-    targetPort: 3500
+    ports:
+    - name: http
+      port: 80
+      targetPort: 3500
 
   - name: frontend-clusterip
     selector: stacknotes-app
     type: ClusterIP
-    port: 80
+    ports:
+    - name: http
+      port: 80
+    - name: http-monitoring
+      port: 9113
+
+  - name: mongodb-exporter
+    selector: mongodb-exporter
+    type: ClusterIP
+    ports:
+      - name: http-metrics
+        port: 9216
+        targetPort: http-metrics
 
 apps:
   - name: mongodb-svc
@@ -70,6 +86,17 @@ apps:
     sidecars:
       - nginx-exporter
 
+  - name: mongodb-exporter
+    image: percona/mongodb_exporter:0.37.0
+    ports:
+      - port: 9216
+        name: http-metrics
+    args:
+      - '--mongodb.uri=mongodb://mongodb_exporter:mongopw@db-clusterip:27017/admin?authSource=admin'
+      - '--collect-all'
+    initContainers:
+      - wait-for-user
+
 sidecars:
   nginx-exporter:
     image: nginx/nginx-prometheus-exporter:latest
@@ -90,3 +117,15 @@ initContainers:
   wait-for-mongo:
     image: busybox
     command: ['sh', '-c', 'until nc -z db-clusterip 27017; do echo waiting for mongo; sleep 2; done;']
+  wait-for-user:
+    image: mongo
+    command:
+      - sh
+      - -c
+      - |
+        echo "Waiting for user mongodb_exporter..."
+        until mongosh "mongodb://mongodb_exporter:mongopw@db-clusterip:27017/admin?authSource=admin" --eval "db.runCommand({ ping: 1 })" > /dev/null 2>&1; do
+          echo "User is not ready yet, retrying..."
+          sleep 5
+        done
+        echo "User exists, starting the exporter"

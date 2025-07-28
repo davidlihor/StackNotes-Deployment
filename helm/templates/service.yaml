@@ -11,14 +11,11 @@ spec:
     app: {{ .selector }}
   type: {{ .type }}
   ports:
-    - name: http
+    {{- range .ports }}
+    - name: {{ .name }}
       port: {{ .port }}
       {{- if .targetPort  }}
       targetPort: {{ .targetPort }}
       {{- end }}
-  {{- if eq .name "frontend-clusterip" }}
-    - name: http-monitoring
-      port: 9113
-      targetPort: 9113
-  {{- end }}
+    {{- end }}
 {{- end }}

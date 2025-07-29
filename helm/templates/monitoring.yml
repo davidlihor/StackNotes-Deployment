@@ -1,10 +1,11 @@
+{{- if .Values.prometheus.enabled }}
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: mongodb-exporter-monitor
   namespace: monitoring
   labels:
-    release: prometheus
+    release: promstack
 spec:
   selector:
     matchLabels:
@@ -14,8 +15,7 @@ spec:
     path: /metrics
     interval: 10s
   namespaceSelector:
-    matchNames:
-    - default
+{{ toYaml .Values.prometheus.namespaceSelector | indent 4 }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
@@ -23,7 +23,7 @@ metadata:
   name: backend-exporter-monitor
   namespace: monitoring
   labels:
-    release: prometheus
+    release: promstack
 spec:
   selector:
     matchLabels:
@@ -33,8 +33,7 @@ spec:
     path: /metrics
     interval: 10s
   namespaceSelector:
-    matchNames:
-    - default
+{{ toYaml .Values.prometheus.namespaceSelector | indent 4 }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
@@ -42,7 +41,7 @@ metadata:
   name: frontend-exporter-monitor
   namespace: monitoring
   labels:
-    release: prometheus
+    release: promstack
 spec:
   selector:
     matchLabels:
@@ -52,5 +51,5 @@ spec:
     interval: 10s
     path: /metrics
   namespaceSelector:
-    matchNames:
-    - default
+{{ toYaml .Values.prometheus.namespaceSelector | indent 4 }}
+{{- end }}

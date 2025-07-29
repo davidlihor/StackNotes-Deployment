@@ -6,6 +6,13 @@ defaultResources:
     cpu: "100m"
     memory: "128Mi"
 
+prometheus:
+  enabled: true
+  namespaceSelector:
+    matchNames:
+      - default
+      - stacknotes
+
 services:
   - name: db-clusterip
     selector: mongodb-svc
@@ -41,7 +48,9 @@ services:
 
 apps:
   - name: mongodb-svc
-    image: mongo
+    image:
+      repository: mongo
+      tag: latest
     label: stacknotes
     replicaCount: 1
     ports: 
@@ -55,7 +64,9 @@ apps:
         type: pvc
 
   - name: stacknotes-svc
-    image: stacknotes-backend
+    image: 
+      repository: davidlihor/stacknotes-backend 
+      tag: latest
     label: stacknotes
     replicaCount: 1
     ports: 
@@ -75,7 +86,9 @@ apps:
       - wait-for-mongo
 
   - name: stacknotes-app
-    image: stacknotes-frontend
+    image: 
+      repository: davidlihor/stacknotes-frontend 
+      tag: latest
     label: stacknotes
     replicaCount: 1
     ports: 
@@ -87,7 +100,9 @@ apps:
       - nginx-exporter
 
   - name: mongodb-exporter
-    image: percona/mongodb_exporter:0.37.0
+    image: 
+      repository: percona/mongodb_exporter  
+      tag: "0.37.0"
     ports:
       - port: 9216
         name: http-metrics
@@ -99,7 +114,9 @@ apps:
 
 sidecars:
   nginx-exporter:
-    image: nginx/nginx-prometheus-exporter:latest
+    image:
+      repository: nginx/nginx-prometheus-exporter
+      tag: latest
     ports:
       - port: 9113
         name: metrics
@@ -115,10 +132,14 @@ sidecars:
 
 initContainers:
   wait-for-mongo:
-    image: busybox
+    image:
+      repository: busybox
+      tag: latest
     command: ['sh', '-c', 'until nc -z db-clusterip 27017; do echo waiting for mongo; sleep 2; done;']
   wait-for-user:
-    image: mongo
+    image:
+      repository: mongo
+      tag: latest
     command:
       - sh
       - -c

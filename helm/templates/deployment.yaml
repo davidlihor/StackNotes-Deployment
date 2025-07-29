@@ -24,7 +24,7 @@ spec:
         {{- $init := index $.Values.initContainers $initName }}
         {{- if $init }}
         - name: {{ $initName }}
-          image: {{ $init.image }}
+          image: {{ $init.image.repository }}:{{ $init.image.tag }}
           {{- if $init.command }}
           command:
             {{- toYaml $init.command | nindent 12 }}
@@ -41,7 +41,7 @@ spec:
 
       containers:
         - name: {{ .name }}
-          image: {{ .image }}
+          image: {{ .image.repository }}:{{ .image.tag }}
           {{- if or .config .secrets }}
           env:
             {{- if .config }}
@@ -101,7 +101,7 @@ spec:
         {{- $sidecarConfig := index $.Values.sidecars $sidecarName }}
         {{- if $sidecarConfig }}
         - name: {{ $sidecarName }}
-          image: {{ $sidecarConfig.image }}
+          image: {{ $sidecarConfig.image.repository }}:{{ $sidecarConfig.image.tag }}
           {{- if $sidecarConfig.command }}
           command:
             {{- toYaml $sidecarConfig.command | nindent 12 }}

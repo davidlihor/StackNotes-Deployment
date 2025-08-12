@@ -16,7 +16,7 @@ spec:
               until nc -z db-clusterip 27017; do
                 echo "Waiting for MongoDB... attempt $n"
                 n=$((n+1))
-                if [ $n -ge 30 ]; then
+                if [ $n -ge 45 ]; then
                   echo "Timeout waiting for MongoDB"
                   exit 1
                 fi

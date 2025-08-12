@@ -44,7 +44,7 @@ for cert in "$CERTS_DIR"/*.crt; do
         kubectl create secret tls "$secret_name" --key="$key" --cert="$cert"
     fi
     
-    echo "Secret $secret_name created from $key and $cert"
+    echo "Secret $secret_name created from $(basename "$key") and $(basename "$cert")"
 done;
 
 

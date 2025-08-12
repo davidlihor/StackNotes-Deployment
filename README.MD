@@ -109,3 +109,15 @@ Make sure to:
 - Run `kubectl apply -f apps-of-apps.yaml` to deploy your apps through Argo CD.
 - Use the generated credentials to log in to Argo CD.
 - Access the apps via configured hostnames on your local machine.
+
+
+
+kubectl port-forward svc/argocd-server -n argocd 8080:443
+argocd login localhost:8080 --insecure
+argocd app create root-app \
+  --repo https://github.com/davidlihor/StackNotes-Deployment \
+  --path argocd/apps \
+  --dest-server https://kubernetes.default.svc \
+  --dest-namespace default \
+  --directory-recurse \
+  --sync-policy automated

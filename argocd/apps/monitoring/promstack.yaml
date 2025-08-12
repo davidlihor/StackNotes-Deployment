@@ -12,7 +12,7 @@ spec:
     chart: kube-prometheus-stack
     targetRevision: 75.13.0
     helm:
-      skipCrds: true
+      skipCrds: false
       values: |
         grafana:
           adminPassword: "admin"
@@ -27,3 +27,4 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      - ServerSideApply=true

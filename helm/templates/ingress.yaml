@@ -91,9 +91,9 @@ spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - prometheus.stacknotes.local 
+        - prometheus.stacknotes.local
         - grafana.stacknotes.local
-      secretName: stacknotes-tls
+      secretName: promstack-tls
   rules:
     - host: prometheus.stacknotes.local
       http:

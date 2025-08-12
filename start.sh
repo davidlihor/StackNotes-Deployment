@@ -9,9 +9,11 @@ fi
 current_dir=$(pwd)
 
 cd "$current_dir"/devcerts
-mkcert -key-file stacknotes-tls.key -cert-file stacknotes-tls.crt app.stacknotes.local api.stacknotes.local
 mkcert -key-file argocd-ui-tls.key -cert-file argocd-ui-tls.crt argocd.stacknotes.local
 mkcert -key-file argocd-grpc-tls.key -cert-file argocd-grpc-tls.crt grpc.argocd.stacknotes.local
+mkcert -key-file stacknotes-tls.key -cert-file stacknotes-tls.crt app.stacknotes.local api.stacknotes.local
+mkcert -key-file promstack-tls.key -cert-file promstack-tls.crt prometheus.stacknotes.local grafana.stacknotes.local
+
 chmod -R +rwx .
 
 cd "$current_dir"
@@ -36,7 +38,7 @@ for cert in "$CERTS_DIR"/*.crt; do
         continue;
     fi
     
-    if [[ "$key" == *"monitoring"* ]]; then
+    if [[ "$key" == *"promstack"* ]]; then
         kubectl create secret tls "$secret_name" --key="$key" --cert="$cert" --namespace=monitoring
     elif [[ "$key" == *"argocd"* ]]; then
         kubectl create secret tls "$secret_name" --key="$key" --cert="$cert" --namespace=argocd

@@ -102,7 +102,7 @@ spec:
             path: "/"
             backend:
               service:
-                name: prometheus
+                name: promstack-kube-prometheus-prometheus
                 port:
                   number: 9090
     - host: grafana.stacknotes.local
@@ -112,6 +112,6 @@ spec:
             path: "/"
             backend:
               service:
-                name: grafana
+                name: promstack-grafana
                 port:
-                  number: 3000
+                  number: 80

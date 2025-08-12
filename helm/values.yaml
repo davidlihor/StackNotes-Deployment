@@ -103,6 +103,7 @@ apps:
     image: 
       repository: percona/mongodb_exporter  
       tag: "0.37.0"
+    label: stacknotes
     ports:
       - port: 9216
         name: http-metrics

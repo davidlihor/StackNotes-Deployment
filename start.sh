@@ -51,7 +51,7 @@ done;
 
 
 IP="127.0.0.1"
-DOMAIN="grpc.argocd.stacknotes.local argocd.stacknotes.local"
+DOMAIN="grpc.argocd.stacknotes.local argocd.stacknotes.local app.stacknotes.local api.stacknotes.local prometheus.stacknotes.local grafana.stacknotes.local"
 LINE="$IP $DOMAIN"
 
 if grep -Fxq "$LINE" /etc/hosts; then

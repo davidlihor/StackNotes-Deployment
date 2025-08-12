@@ -19,7 +19,7 @@ access at argocd.stacknotes.local, grpc.argocd.stacknotes.local for argocd cli
 app will be avaible at: app.stacknotes.local
 
 
-
+U69plMsDudfMWZIx
 
 
 # Argo CD Setup Guide

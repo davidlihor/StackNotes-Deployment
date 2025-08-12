@@ -52,16 +52,14 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: ingress-svc
-  labels:
-    name: ingress-svc
+  name: stacknotes-ingress
 spec:
   ingressClassName: nginx
   tls:
     - hosts:
         - app.stacknotes.local
         - api.stacknotes.local
-      secretName: stacknotes-local-tls
+      secretName: stacknotes-tls
   rules:
     - host: app.stacknotes.local
       http:
@@ -83,3 +81,37 @@ spec:
                 name: backend-clusterip
                 port:
                   number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: promstack-ingress
+  namespace: monitoring
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - prometheus.stacknotes.local 
+        - grafana.stacknotes.local
+      secretName: stacknotes-tls
+  rules:
+    - host: prometheus.stacknotes.local
+      http:
+        paths:
+          - pathType: Prefix
+            path: "/"
+            backend:
+              service:
+                name: prometheus
+                port:
+                  number: 9090
+    - host: grafana.stacknotes.local
+      http:
+        paths:
+          - pathType: Prefix
+            path: "/"
+            backend:
+              service:
+                name: grafana
+                port:
+                  number: 3000

@@ -41,14 +41,6 @@
     chdir: "{{ frontend_path }}/FRONTEND"
     creates: "{{ frontend_path }}/FRONTEND/node_modules"
 
-- name: Copy .env file securely
-  ansible.builtin.template:
-    src: .env.j2
-    dest: "{{ frontend_path }}/FRONTEND/.env"
-    owner: vagrant
-    group: vagrant
-    mode: "600"
-
 - name: Build project
   ansible.builtin.command: npm run build
   args:
@@ -83,6 +75,14 @@
     owner: www-data
     group: www-data
     mode: "0755"
+
+- name: Copy .env file securely
+  ansible.builtin.template:
+    src: env.js.j2
+    dest: "/usr/share/nginx/html/env.js"
+    owner: vagrant
+    group: vagrant
+    mode: "644"
 
 - name: Reload nginx
   ansible.builtin.service:

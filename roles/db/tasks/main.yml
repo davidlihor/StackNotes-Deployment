@@ -1,3 +1,8 @@
+---
+- name: Load secrets for database
+  ansible.builtin.include_vars:
+    file: secrets.yml
+
 - name: Install Dependencies
   ansible.builtin.apt:
     name:
@@ -54,8 +59,8 @@
   ansible.builtin.shell: |
     mongosh admin --eval '
       db.createUser({
-        user: "root",
-        pwd: "mongopw",
+        user: "{{ mongo_initdb_root_username }}",
+        pwd: "{{ mongo_initdb_root_password }}",
         roles: [ { role: "userAdminAnyDatabase", db: "admin" } ]
       })
     '

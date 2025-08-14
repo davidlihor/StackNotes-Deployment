@@ -1,62 +1,100 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-set -e
-if [ "$EUID" -ne 0 ]; then
-    echo "Please, run with sudo command"
-    exit 1;
-fi
+set -euo pipefail
 
-current_dir=$(pwd)
-
-cd "$current_dir"/devcerts
-mkcert -key-file argocd-ui-tls.key -cert-file argocd-ui-tls.crt argocd.stacknotes.local
-mkcert -key-file argocd-grpc-tls.key -cert-file argocd-grpc-tls.crt grpc.argocd.stacknotes.local
-mkcert -key-file stacknotes-tls.key -cert-file stacknotes-tls.crt app.stacknotes.local api.stacknotes.local
-mkcert -key-file promstack-tls.key -cert-file promstack-tls.crt prometheus.stacknotes.local grafana.stacknotes.local
-
-chmod -R +rwx .
-
-cd "$current_dir"
-CERTS_DIR="$current_dir"/devcerts
-
-if [ ! -d "$CERTS_DIR" ]; then
-    echo "Cert folder not found"
+if [[ "$EUID" -ne 0 ]]; then
+    echo "Please, run with sudo command."
     exit 1
 fi
 
-for cert in "$CERTS_DIR"/*.crt; do
-    [ -e "$cert" ] || {
-        echo "No certificate found in $CERTS_DIR";
-        exit 1;
-    }
+command -v mkcert >/dev/null || { echo "Error: mkcert is required, install it first"; exit 1; }
+command -v kubectl >/dev/null || { echo "Error: kubectl is required, install it first"; exit 1; }
 
+CERTS_DIR="$(pwd)/devcerts"
+
+if [ ! -d "$CERTS_DIR" ]; then
+    mkdir -p "$CERTS_DIR"
+    echo "Cert folder created at $CERTS_DIR."
+fi
+
+cd "$CERTS_DIR"
+
+mkcert -key-file argocd-ui-tls.key \
+       -cert-file argocd-ui-tls.crt \
+       argocd.stacknotes.local
+
+mkcert -key-file argocd-grpc-tls.key \
+       -cert-file argocd-grpc-tls.crt \
+       grpc.argocd.stacknotes.local
+
+mkcert -key-file stacknotes-tls.key \
+       -cert-file stacknotes-tls.crt \
+       app.stacknotes.local api.stacknotes.local
+
+mkcert -key-file promstack-tls.key \
+       -cert-file promstack-tls.crt \
+       prometheus.stacknotes.local grafana.stacknotes.local
+
+chmod -R +rwx .
+chown -R $SUDO_USER:$SUDO_USER .
+
+for cert in "$CERTS_DIR"/*.crt; do
     secret_name=$(basename "$cert" .crt)
-    key="${CERTS_DIR}/${secret_name}.key"
-    
-    if [ ! -f "$key" ]; then
-        echo "WARNING! Key for $cert not found"
-        continue;
-    fi
-    
-    if [[ "$key" == *"promstack"* ]]; then
-        kubectl create secret tls "$secret_name" --key="$key" --cert="$cert" --namespace=monitoring
-    elif [[ "$key" == *"argocd"* ]]; then
-        kubectl create secret tls "$secret_name" --key="$key" --cert="$cert" --namespace=argocd
+    key="$CERTS_DIR/$secret_name.key"
+
+    if [[ "$secret_name" == promstack* ]]; then
+        ns=monitoring
+    elif [[ "$secret_name" == argocd* ]]; then
+        ns=argocd
     else
-        kubectl create secret tls "$secret_name" --key="$key" --cert="$cert"
+        ns=default
     fi
-    
-    echo "Secret $secret_name created from $(basename "$key") and $(basename "$cert")"
-done;
+
+    kubectl create namespace "$ns" || true
+    kubectl delete secret "$secret_name" --namespace="$ns" || true
+    kubectl create secret tls "$secret_name" \
+        --key="$key" \
+        --cert="$cert" \
+        --namespace="$ns"
+done
 
 
 IP="127.0.0.1"
-DOMAIN="grpc.argocd.stacknotes.local argocd.stacknotes.local app.stacknotes.local api.stacknotes.local prometheus.stacknotes.local grafana.stacknotes.local"
-LINE="$IP $DOMAIN"
+DOMAINS=(
+  app.stacknotes.local
+  api.stacknotes.local
+  prometheus.stacknotes.local
+  grafana.stacknotes.local
+  argocd.stacknotes.local
+  grpc.argocd.stacknotes.local
+)
 
-if grep -Fxq "$LINE" /etc/hosts; then
-    echo -e "Domains already added: $DOMAIN"
-else
-    echo -e "\n#Custom\n$LINE" | tee -a /etc/hosts > /dev/null
-    echo "Domains added: $DOMAIN"
+MARKER="#StackNotes"
+HOSTS_FILE="/etc/hosts"
+NEW_LINE="$IP ${DOMAINS[*]}"
+
+TMP_FILE=$(mktemp)
+trap 'rm -f "$TMP_FILE"' EXIT
+
+awk -v marker="$MARKER" -v newline="$NEW_LINE" '
+  $0 == marker {
+    print
+    getline
+    print newline
+    next
+  }
+  { print }
+' "$HOSTS_FILE" > "$TMP_FILE"
+
+
+if ! grep -Fxq "$MARKER" "$HOSTS_FILE"; then
+  {
+    echo ""
+    echo "$MARKER"
+    echo "$NEW_LINE"
+  } >> "$TMP_FILE"
 fi
+
+cp "$TMP_FILE" "$HOSTS_FILE"
+
+echo "The /etc/hosts file has been updated under the $MARKER marker."

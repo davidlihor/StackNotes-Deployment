@@ -1,51 +1,72 @@
-Requirements: 
-k8s cluster
+There are 2 ways to choose which metod to run StackNotes app.
+
+1. With K8S Cluster via GitOps
+
+Requirements:
+argocd cli
+kubectl
+mkcert for https
+
 Installed kubectl command-line tool.
 Have a kubeconfig file (default location is ~/.kube/config).
 
-
-1. Install Argo CD¶
 kubectl create namespace argocd
 kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 
-run
-start.sh to install certs
-
-
-user: admin
-password: kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
-
-access at argocd.stacknotes.local, grpc.argocd.stacknotes.local for argocd cli
-app will be avaible at: app.stacknotes.local
-
-
-U69plMsDudfMWZIx
-
-
-# Argo CD Setup Guide
-
-## Requirements
-
-- A running Kubernetes cluster.
-- `kubectl` command-line tool installed and configured.
-- A valid kubeconfig file (default location: `~/.kube/config`).
-
----
-
-## 1. Install Argo CD
-
-Create the `argocd` namespace and install Argo CD manifests:
-
-kubectl create namespace argocd
-kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
-
----
 
 ## 2. Generate TLS Certificates and Create Kubernetes Secrets (`start.sh`)
 
 Run the `start.sh` script to generate local TLS certificates for your domains and create Kubernetes TLS secrets:
 
-sudo -E ./start.sh
+run: sudo -E ./start.sh to install certs and local DNS resolve
+
+kubectl port-forward svc/argocd-server -n argocd 8080:443
+argocd login localhost:8080 --insecure
+
+user: admin
+password: kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+
+argocd app create apps-root \
+  --repo https://github.com/davidlihor/StackNotes-Deployment \
+  --path argocd/apps \
+  --dest-server https://kubernetes.default.svc \
+  --dest-namespace default \
+  --directory-recurse \
+  --sync-policy automated
+
+then u have the fallowing:
+
+  app.stacknotes.local - StackNotes (frontend ui)
+  api.stacknotes.local - StackNotes (backend api)
+  prometheus.stacknotes.local - Prometheus
+  grafana.stacknotes.local - Grafana
+  argocd.stacknotes.local - ArgoCD UI
+  grpc.argocd.stacknotes.local - ArgoCD gRPC (for argocd cli)
+
+
+app will be avaible at: app.stacknotes.local
+
+
+
+
+2. Prin EC2/VM instance via Ansible
+
+
+
+
+
+
+====
+
+
+
+
+
+
+
+
+
+
 
 ### What `start.sh` does:
 
@@ -112,12 +133,3 @@ Make sure to:
 
 
 
-kubectl port-forward svc/argocd-server -n argocd 8080:443
-argocd login localhost:8080 --insecure
-argocd app create root-app \
-  --repo https://github.com/davidlihor/StackNotes-Deployment \
-  --path argocd/apps \
-  --dest-server https://kubernetes.default.svc \
-  --dest-namespace default \
-  --directory-recurse \
-  --sync-policy automated
